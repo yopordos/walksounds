@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000">
+  <title>WS — canción día</title>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body {
+      width:100%; height:100%;
+      background:#000; color:#fff;
+      font-family:system-ui,-apple-system,sans-serif;
+      user-select:none; -webkit-user-select:none;
+      overflow:hidden;
+    }
+
+    /* ── Layout ── */
+    .screen {
+      height:100dvh;
+      display:flex; flex-direction:column; align-items:center;
+    }
+
+    /* ── Header ── */
+    .top-bar {
+      width:100%; padding:20px 28px 0;
+      display:flex; align-items:center; justify-content:space-between;
+      flex-shrink:0;
+    }
+    .label-ws  { font-size:9px; letter-spacing:.28em; text-transform:uppercase; color:rgba(255,255,255,.16); }
+    .top-right { display:flex; align-items:center; gap:8px; }
+    .day-date  { font-size:9px; letter-spacing:.06em; color:rgba(255,255,255,.22); }
+
+    /* ── Campo de formas ── */
+    .curve-wrap { flex:1; width:100%; position:relative; min-height:0; }
+    #curve-canvas { width:100%; height:100%; display:block; }
+
+    /* ── Controles ── */
+    .controls {
+      flex-shrink:0;
+      display:flex; flex-direction:column; align-items:center;
+      padding-bottom:28px;
+    }
+    #play-btn {
+      width:72px; height:72px; border-radius:50%;
+      border:1px solid rgba(255,255,255,.22);
+      background:transparent; cursor:pointer; color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      transition:border-color .4s, opacity .4s;
+      margin:22px 0 14px;
+    }
+    #play-btn:hover { border-color:rgba(255,255,255,.5); }
+    #play-btn.playing { border-color:rgba(255,255,255,.38); animation:breathe 4s ease-in-out infinite; }
+    #play-btn:disabled { opacity:.22; cursor:default; }
+    @keyframes breathe {
+      0%,100% { transform:scale(1); opacity:.5; }
+      50%      { transform:scale(1.08); opacity:1; }
+    }
+    .ctrl-btn {
+      background:none; border:none;
+      font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+      color:rgba(255,255,255,.22); cursor:pointer; padding:4px 0;
+      transition:color .2s;
+    }
+    .ctrl-btn:hover { color:rgba(255,255,255,.55); }
+
+    /* ── Mic dot ── */
+    .mic-dot {
+      width:5px; height:5px; border-radius:50%; flex-shrink:0;
+      background:rgba(255,255,255,.18); transition:background .4s;
+    }
+    .mic-dot.active { background:rgba(80,200,140,.85); animation:recpulse 2.5s ease-in-out infinite; }
+    @keyframes recpulse { 0%,100%{opacity:.7} 50%{opacity:1} }
+
+    /* ── Toast ── */
+    #toast {
+      position:fixed; bottom:78px; right:16px;
+      font-family:ui-monospace,'Cascadia Code',monospace;
+      font-size:8.5px; letter-spacing:.06em;
+      color:rgba(255,255,255,.45); pointer-events:none;
+      opacity:0; transition:opacity .3s;
+      text-align:right;
+    }
+    #toast.show { opacity:1; }
+
+    /* ── Panel técnico ── */
+    #tech-log {
+      position:fixed; bottom:112px; right:16px;
+      width:220px;
+      background:rgba(0,0,0,.92);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:4px;
+      padding:13px 15px;
+      font-family:ui-monospace,'Cascadia Code','Fira Code',monospace;
+      font-size:9.5px; letter-spacing:.04em; line-height:1.85;
+      color:rgba(255,255,255,.32);
+      pointer-events:none; overflow:hidden;
+    }
+    #tech-log .tl-vol-row {
+      display:flex; align-items:center; gap:8px;
+      pointer-events:auto;
+    }
+    #tech-log .tl-vol-label { flex:1; opacity:.55; }
+    #tech-log .vol-slider {
+      -webkit-appearance:none; appearance:none;
+      flex:1; height:1px;
+      background:rgba(255,255,255,.20);
+      outline:none; cursor:pointer; border:none;
+    }
+    #tech-log .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance:none;
+      width:7px; height:7px; border-radius:50%;
+      background:rgba(255,255,255,.55);
+      cursor:pointer; margin-top:-3px;
+    }
+    #tech-log .vol-slider::-moz-range-thumb {
+      width:7px; height:7px; border-radius:50%;
+      background:rgba(255,255,255,.55);
+      border:none; cursor:pointer;
+    }
+    #tech-log .vol-slider::-webkit-slider-runnable-track { height:1px; }
+    #tech-log .tl-head {
+      font-size:7px; letter-spacing:.16em; text-transform:uppercase;
+      color:rgba(255,255,255,.14); margin-bottom:3px;
+    }
+    #tech-log hr {
+      border:none; border-top:1px solid rgba(255,255,255,.07); margin:6px 0;
+    }
+    #tech-log .tl-row {
+      display:flex; justify-content:space-between; gap:6px; align-items:center;
+    }
+    #tech-log .tl-name {
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
+    }
+    #tech-log .tl-bar {
+      width:44px; height:1.5px;
+      background:rgba(255,255,255,.08); position:relative; flex-shrink:0;
+    }
+    #tech-log .tl-fill {
+      position:absolute; left:0; top:0; bottom:0;
+      background:rgba(255,255,255,.34); transition:width .9s ease;
+    }
+    #tech-log .tl-val {
+      width:22px; text-align:right; flex-shrink:0; opacity:.52;
+    }
+    #tech-log .tl-event {
+      display:flex; gap:8px; font-size:8.5px;
+      color:rgba(255,255,255,.18);
+    }
+    #tech-log .tl-event.fresh { color:rgba(255,255,255,.55); }
+    #tech-log .tl-dim { color:rgba(255,255,255,.14); }
+    #tech-log .on  { color:rgba(80,200,140,.78); }
+
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <div class="top-bar">
+      <span class="label-ws">walksound</span>
+      <div class="top-right">
+        <span class="day-date" id="day-date"></span>
+        <div class="mic-dot" id="mic-dot"></div>
+      </div>
+    </div>
+
+    <div class="curve-wrap">
+      <canvas id="curve-canvas"></canvas>
+    </div>
+
+    <div class="controls">
+      <button id="play-btn" disabled>
+        <svg id="play-icon" width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M5 3 L15 9 L5 15 Z" fill="rgba(255,255,255,0.8)"/>
+        </svg>
+      </button>
+      <button class="ctrl-btn" id="share-btn">compartir</button>
+    </div>
+  </div>
+
+  <!-- Panel técnico: lo que está haciendo el sistema -->
+  <div id="tech-log">
+    <div id="tech-log-body">
+      <div class="tl-head">SYSTEM</div>
+      <div class="tl-row"><span>mic</span><span class="tl-dim">○ —</span></div>
+      <div class="tl-row"><span>capturas</span><span class="tl-dim">0/8</span></div>
+      <hr>
+      <div class="tl-head">PALETA</div>
+      <span class="tl-dim">—</span>
+      <hr>
+      <div class="tl-head">EVENTOS</div>
+      <span class="tl-dim">—</span>
+    </div>
+    <hr>
+    <div class="tl-vol-row">
+      <span class="tl-vol-label">fondo</span>
+      <input type="range" class="vol-slider" id="vol-atmo" min="0" max="100" value="100">
+    </div>
+    <div class="tl-vol-row" style="margin-top:6px">
+      <span class="tl-vol-label">agentes</span>
+      <input type="range" class="vol-slider" id="vol-agents" min="0" max="100" value="100">
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script type="module">
+    import { generateTodayLog }          from './js/fakelog.js';
+    import { composeDay, describeScore } from './js/composer.js';
+    import { Player }                    from './js/player.js';
+    import { AcousticSensor, GrainCapture } from './js/mic.js';
+    import { fetchCurrentWeather }       from './js/weather.js';
+
+    const player  = new Player();
+    const mic     = new AcousticSensor();
+    let todayLog  = generateTodayLog();
+
+    let currentScore    = null;
+    let playing         = false;
+    let acousticSummary = null;
+    let captureBuffers  = [];
+    const MAX_CAPTURES  = 8;
+
+    // ── Toast ────────────────────────────────────────────────────────────────
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+    function showToast(msg, ms = 2800) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
+    }
+
+    const micDot = document.getElementById('mic-dot');
+
+    // ── DeviceMotion ─────────────────────────────────────────────────────────
+    let realtimeMovement = null;
+    let _accelBuffer = [];
+    function _initMotion() {
+      const start = () => {
+        window.addEventListener('devicemotion', e => {
+          const a = e.accelerationIncludingGravity;
+          if (!a || (a.x == null && a.y == null)) return;
+          const mag = Math.sqrt((a.x||0)**2 + (a.y||0)**2 + (a.z||0)**2);
+          const movement = Math.min(1, Math.max(0, (mag - 9.0) / 8.0));
+          _accelBuffer.push(movement);
+          if (_accelBuffer.length > 20) _accelBuffer.shift();
+          realtimeMovement = _accelBuffer.reduce((a, b) => a + b, 0) / _accelBuffer.length;
+        });
+      };
+      if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission().then(r => { if (r === 'granted') start(); }).catch(() => {});
+      } else {
+        start();
+      }
+    }
+    _initMotion();
+
+    function recompose() {
+      currentScore = composeDay(todayLog, acousticSummary, captureBuffers.length);
+      updateMixerPalette(currentScore?.palette);
+      showInfo();
+    }
+
+    function applyAcousticSummary(summary) {
+      acousticSummary = summary;
+      recompose();
+    }
+
+    // ── Mic ──────────────────────────────────────────────────────────────────
+    let micInited = false;
+    let micActive = false;
+    async function tryInitMic() {
+      if (micInited) return;
+      micInited = true;
+      try {
+        await mic.init();
+        micDot.classList.add('active');
+        micActive = true;
+        updateTechLog();
+        mic.startLogging(300);
+        setTimeout(() => {
+          mic.sample();
+          const s = mic.summarize();
+          if (s) applyAcousticSummary(s);
+        }, 3000);
+        setInterval(() => {
+          const s2 = mic.summarize();
+          if (s2) applyAcousticSummary(s2);
+        }, 300_000);
+
+        const grainCapture = new GrainCapture(mic._stream, mic.analyser);
+        const onCapture = async (arrayBuffer) => {
+          if (!player.audio.ctx) { window._pendingCapture = arrayBuffer; return; }
+          try {
+            const audioBuf = await player.audio.ctx.decodeAudioData(arrayBuffer);
+            captureBuffers.push(audioBuf);
+            if (captureBuffers.length > MAX_CAPTURES) captureBuffers.shift();
+            player.captureBuffers = captureBuffers;
+            addGranularAgent(captureBuffers.length - 1);
+            player.injectGranular(audioBuf);
+            recompose();
+            showToast(`captura ${captureBuffers.length}`);
+          } catch (e) { console.warn('decodeAudioData:', e); }
+        };
+        grainCapture.start({ rmsThreshold: 0.14, duration: 16, cooldown: 90 }, onCapture);
+
+        document.addEventListener('keydown', e => {
+          if (e.key !== 'g' && e.key !== 'G') return;
+          grainCapture._record(6);
+          showToast('grabando 6s…');
+        });
+      } catch (_) {}
+    }
+
+    let weatherInited = false;
+    async function tryFetchWeather() {
+      if (weatherInited) return;
+      weatherInited = true;
+      try {
+        const w  = await fetchCurrentWeather();
+        todayLog = generateTodayLog(w);
+        recompose();
+      } catch (_) {}
+    }
+
+    document.addEventListener('click', () => { tryInitMic(); tryFetchWeather(); }, { once: true });
+
+    // ── Visualización: campo de formas ───────────────────────────────────────
+
+    const canvas = document.getElementById('curve-canvas');
+    const ctx2d  = canvas.getContext('2d');
+
+    // ── Teoría sinestésica color-forma-sonido ─────────────────────────────────
+    // Kandinsky (1912): amarillo=triángulo (agudo/activo), azul=círculo (grave/espiritual),
+    // rojo=cuadrado (estable/terrestre). Investigación moderna: Bouba/Kiki (Ramachandran
+    // 2001) — formas redondeadas=sonidos suaves, angulares=sonidos agudos/percusivos.
+    //
+    // Mapeo aplicado: frecuencia → tono del color (graves=violeta/índigo, agudos=ámbar/blanco)
+    //                 timbre   → forma (FM/resonancia=hexágono, ruido=círculo difuso, percusivo=cruz)
+    //                 duración → tamaño y vida de la forma
+
+    const AGENT_SHAPE = {
+      resonador:   'hexagon',     // FM inarmónico → estructura simétrica compleja
+      cristal:     'star',        // senos puros → irradiante, cristalino
+      campana:     'circle',      // parciales FM → onda expansiva
+      cuerda:      'line',        // sierra → trazo tenso, horizontal
+      gota_metal:  'cross',       // impacto → punto de precisión
+      aliento:     'line',        // ruido vocal → trazo suave, respiración
+      viento:      'line',        // ruido direccional → trazo diagonal
+      arco:        'arc_stroke',  // sierra + glide → arco de curva
+      voz_lejana:  'line',        // formantes → trazo difuso, lejano
+      pulso_metal: 'star',        // sine breve → destello
+    };
+
+    // Color ↔ frecuencia dominante del agente (graves=violeta, medios=verde/cian, agudos=ámbar/blanco)
+    const AGENT_COLOR = {
+      resonador:   [140, 90, 220],  // violeta profundo — grave resonante (46-240Hz)
+      cristal:     [195,235,255],   // azul hielo — senos puros agudos (320-900Hz)
+      campana:     [255,205, 80],   // ámbar dorado — metal cálido (80-220Hz parciales)
+      cuerda:      [100,195,140],   // verde orgánico — cuerdas naturales (40-130Hz)
+      gota_metal:  [160,210,245],   // plata-azul — agua+metal (200-800Hz)
+      aliento:     [235,205,175],   // crema cálida — espectro vocal humano
+      viento:      [175,215,240],   // celeste pálido — aire en movimiento
+      arco:        [200, 90,195],   // magenta — waterphone, misterio
+      voz_lejana:  [220,165,155],   // rosa antiguo — voz a distancia
+      pulso_metal: [255,225, 90],   // oro brillante — percusión metálica (400-1400Hz)
+    };
+
+    // ── Visualización: línea creciente ────────────────────────────────────────
+    // La línea crece en X con el tiempo. Cada evento sonoro la desvía en Y
+    // y tiñe su color — la figura que va emergiendo ES la composición.
+    const linePoints       = [];   // { x, y, r, g, b }
+    const activeInfluences = [];   // { dir, cur, decay, color } — eventos activos
+    const LINE_SECS        = 480;
+    let   sessionStartAt   = null;
+    let   fragStartAt      = null;
+    let   lastPointAt      = 0;
+
+    // Firma visual de cada agente: dirección y velocidad de influencia
+    const AGENT_INFLUENCE = {
+      resonador:   { dir: -1,   str: 0.08, decay: 0.93 },
+      cristal:     { dir:  1,   str: 0.05, decay: 0.84 },
+      campana:     { dir:  1,   str: 0.07, decay: 0.91 },
+      cuerda:      { dir: -1,   str: 0.07, decay: 0.97 },
+      gota_metal:  { dir: -1,   str: 0.05, decay: 0.79 },
+      aliento:     { dir:  0.3, str: 0.03, decay: 0.96 },
+      viento:      { dir:  1,   str: 0.06, decay: 0.95 },
+      arco:        { dir:  1,   str: 0.09, decay: 0.98 },
+      voz_lejana:  { dir: -1,   str: 0.04, decay: 0.96 },
+      pulso_metal: { dir:  1,   str: 0.07, decay: 0.77 },
+    };
+
+    function warmthColor(warmth) {
+      return [
+        Math.round(140 + warmth *  70),
+        Math.round(125 + warmth *  50),
+        Math.round(195 - warmth * 115),
+      ];
+    }
+
+    function addLinePoint() {
+      if (!playing || !currentScore || !sessionStartAt) return;
+      const now         = performance.now();
+      const elapsed     = (now - sessionStartAt) / 1000;
+      const x           = Math.min(1, elapsed / LINE_SECS);
+      const fragElapsed = (now - fragStartAt) / 1000;
+      const frac        = Math.min(1, fragElapsed / currentScore.duration);
+      const warmth      = currentScore.atmosphere?.warmth ?? 0.5;
+
+      // Sumar influencias activas → empuje neto de la línea
+      let push = 0;
+      let topStr = 0;
+      let topColor = null;
+      for (let i = activeInfluences.length - 1; i >= 0; i--) {
+        const inf = activeInfluences[i];
+        push += inf.dir * inf.cur;
+        if (inf.cur > topStr) { topStr = inf.cur; topColor = inf.color; }
+        inf.cur *= inf.decay;
+        if (inf.cur < 0.002) activeInfluences.splice(i, 1);
+      }
+
+      const jitter = (Math.random() - 0.5) * 0.010;
+      const y = Math.max(0.06, Math.min(0.94, 0.5 + push + jitter));
+
+      // Mezcla de color: warmth base → color del agente dominante
+      const [wr, wg, wb] = warmthColor(warmth);
+      const [er, eg, eb] = topColor || [wr, wg, wb];
+      const blend = Math.min(1, topStr / 0.08);
+      linePoints.push({
+        x, y,
+        r: Math.round(wr + (er - wr) * blend * 0.7),
+        g: Math.round(wg + (eg - wg) * blend * 0.7),
+        b: Math.round(wb + (eb - wb) * blend * 0.7),
+      });
+    }
+
+    const CAPTURE_SHAPES = ['circle','triangle','diamond','square','star','hexagon','cross','arrow'];
+
+    const SHAPE_SYMBOL = {
+      circle:     '○',
+      triangle:   '△',
+      diamond:    '◇',
+      square:     '□',
+      star:       '★',
+      hexagon:    '⬡',
+      cross:      '✕',
+      arrow:      '↑',
+      line:       '—',
+      arc_stroke: '⌒',
+    };
+    const CAPTURE_COLORS = [
+      [255,175, 65], [255,120,145], [120,215,160], [ 95,185,255],
+      [195,148,255], [255,138,108], [ 90,230,205], [255,212, 75],
+    ];
+    const captureIdentities = {};
+
+    function setCanvasSize() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width  = canvas.offsetWidth  * dpr;
+      canvas.height = canvas.offsetHeight * dpr;
+    }
+    setCanvasSize();
+    window.addEventListener('resize', setCanvasSize);
+
+    let vizRaf = null;
+    function tickViz() {
+      const dpr = window.devicePixelRatio || 1;
+      const W   = canvas.width;
+      const H   = canvas.height;
+      const now = performance.now();
+
+      ctx2d.clearRect(0, 0, W, H);
+
+      // Añadir punto cada 100ms mientras suena
+      if (playing && now - lastPointAt > 100) {
+        addLinePoint();
+        lastPointAt = now;
+      }
+
+      // Dibujar línea segmento a segmento (cada uno con su color de warmth)
+      if (linePoints.length >= 2) {
+        ctx2d.lineWidth = 0.65 * dpr;
+        ctx2d.lineCap   = 'round';
+        ctx2d.lineJoin  = 'round';
+        for (let i = 1; i < linePoints.length; i++) {
+          const p0 = linePoints[i - 1];
+          const p1 = linePoints[i];
+          ctx2d.beginPath();
+          ctx2d.moveTo(p0.x * W, p0.y * H);
+          ctx2d.lineTo(p1.x * W, p1.y * H);
+          ctx2d.strokeStyle = `rgba(${p1.r},${p1.g},${p1.b},0.40)`;
+          ctx2d.stroke();
+        }
+      }
+
+      vizRaf = requestAnimationFrame(tickViz);
+    }
+
+    // ── Panel técnico ─────────────────────────────────────────────────────────
+    const techLogEl  = document.getElementById('tech-log-body');
+    const logEvents  = [];
+    let   vizPalette = {};
+
+    function updateTechLog() {
+      if (!techLogEl) return;
+
+      const paletteRows = Object.entries(vizPalette)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, p]) => {
+          const isG = name.startsWith('granular');
+          const lbl = isG ? `◆ cap ${name.split('_')[1]}` : name.replace('_',' ');
+          const pct = Math.round(p * 100);
+          return `<div class="tl-row">
+            <span class="tl-name">${lbl}</span>
+            <div class="tl-bar"><div class="tl-fill" style="width:${pct}%"></div></div>
+            <span class="tl-val">${pct}</span>
+          </div>`;
+        }).join('') || '<span class="tl-dim">—</span>';
+
+      const evRows = logEvents.slice(-6).reverse().map((ev, i) => {
+        const alpha = i === 0 ? 0.75 : Math.max(0.12, 0.45 - i * 0.08);
+        return `<div class="tl-event">
+          <span style="opacity:.28">${ev.time}</span>
+          <span style="color:rgba(${ev.color},${alpha});font-size:11px;line-height:1">${ev.symbol}</span>
+        </div>`;
+      }).join('') || '<span class="tl-dim">—</span>';
+
+      techLogEl.innerHTML = `
+        <div class="tl-head">SYSTEM</div>
+        <div class="tl-row"><span>mic</span><span class="${micActive ? 'on' : 'tl-dim'}">${micActive ? '● on' : '○ off'}</span></div>
+        <div class="tl-row"><span>capturas</span><span>${captureBuffers.length}/${MAX_CAPTURES}</span></div>
+        <hr>
+        <div class="tl-head">PALETA</div>
+        ${paletteRows}
+        <hr>
+        <div class="tl-head">EVENTOS</div>
+        ${evRows}
+      `;
+    }
+
+    function logEvent(species) {
+      const now  = new Date();
+      const hh   = now.getHours().toString().padStart(2, '0');
+      const mm   = now.getMinutes().toString().padStart(2, '0');
+      const ss   = now.getSeconds().toString().padStart(2, '0');
+      const isG  = species.startsWith('granular');
+      const shape = isG
+        ? captureIdentities[species]?.shape
+        : AGENT_SHAPE[species];
+      const symbol = SHAPE_SYMBOL[shape] || '·';
+      const [r, g, b] = isG
+        ? (captureIdentities[species]?.color || [255,255,255])
+        : (AGENT_COLOR[species] || [255,255,255]);
+      logEvents.push({ time: `${hh}:${mm}:${ss}`, symbol, color: `${r},${g},${b}` });
+      if (logEvents.length > 14) logEvents.shift();
+      updateTechLog();
+    }
+
+    function pulseAgent(species) {
+      logEvent(species);
+      const isG    = species.startsWith('granular');
+      const color  = isG
+        ? (captureIdentities[species]?.color || [200,200,200])
+        : (AGENT_COLOR[species]              || [200,200,200]);
+      const sig = isG
+        ? { dir: (Math.random() > 0.5 ? 1 : -1), str: 0.06, decay: 0.91 }
+        : (AGENT_INFLUENCE[species] || { dir: 0, str: 0.04, decay: 0.90 });
+      activeInfluences.push({ dir: sig.dir, cur: sig.str, decay: sig.decay, color });
+      if (activeInfluences.length > 10) activeInfluences.shift();
+    }
+
+    function addGranularAgent(index) {
+      const key = `granular_${index}`;
+      captureIdentities[key] = {
+        shape: CAPTURE_SHAPES[index % CAPTURE_SHAPES.length],
+        color: CAPTURE_COLORS[index % CAPTURE_COLORS.length],
+      };
+      updateTechLog();
+    }
+
+    function updateMixerPalette(palette) {
+      vizPalette = palette || {};
+      updateTechLog();
+    }
+
+    function showInfo() {
+      document.getElementById('play-btn').disabled = false;
+    }
+
+    // ── Fecha ────────────────────────────────────────────────────────────────
+    {
+      const now   = new Date();
+      const dias  = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+      const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      document.getElementById('day-date').textContent =
+        `${dias[now.getDay()]} ${now.getDate()} ${meses[now.getMonth()]}`;
+    }
+
+    recompose();
+    tickViz();
+
+    // ── Play/Pause ────────────────────────────────────────────────────────────
+    const playBtn = document.getElementById('play-btn');
+
+    function setPlayState(active) {
+      playing = active;
+      document.getElementById('play-icon').innerHTML = active
+        ? '<rect x="4" y="3" width="3.5" height="12" rx="1" fill="rgba(255,255,255,0.8)"/><rect x="10.5" y="3" width="3.5" height="12" rx="1" fill="rgba(255,255,255,0.8)"/>'
+        : '<path d="M5 3 L15 9 L5 15 Z" fill="rgba(255,255,255,0.8)"/>';
+      active ? playBtn.classList.add('playing') : playBtn.classList.remove('playing');
+    }
+
+    function startPlay(score) {
+      currentScore = score;
+      fragStartAt  = performance.now();
+      if (!sessionStartAt) sessionStartAt = fragStartAt;
+
+      player.onProgress      = null;
+      player.onGranularFired = null;
+      player.onSpecies       = species => pulseAgent(species);
+      player.onComplete = () => {
+        if (!playing) return;
+        if (mic.analyser) mic.sample();
+        const s         = mic.summarize() ?? acousticSummary;
+        const freshScore = composeDay(todayLog, s, captureBuffers.length);
+        player.captureBuffers = captureBuffers;
+        updateMixerPalette(freshScore.palette);
+        startPlay(freshScore);
+      };
+      player.play(score);
+      setPlayState(true);
+    }
+
+    playBtn.onclick = async () => {
+      if (playing) {
+        player.stop(); setPlayState(false);
+        sessionStartAt = null; fragStartAt = null;
+        linePoints.length = 0; activeInfluences.length = 0;
+        return;
+      }
+      if (!currentScore) return;
+      playBtn.disabled = true;
+      try { await player.init(); } catch (e) {
+        console.error('AudioContext:', e);
+        showToast('Error al iniciar audio');
+        playBtn.disabled = false; return;
+      }
+      playBtn.disabled = false;
+
+      if (window._pendingCapture) {
+        const pending = window._pendingCapture;
+        window._pendingCapture = null;
+        player.audio.ctx.decodeAudioData(pending).then(buf => {
+          captureBuffers.push(buf);
+          player.captureBuffers = captureBuffers;
+          addGranularAgent(captureBuffers.length - 1);
+          player.injectGranular(buf);
+          recompose();
+        }).catch(() => {});
+      }
+
+      startPlay(currentScore);
+    };
+
+    // ── Barras de volumen ─────────────────────────────────────────────────────
+    document.getElementById('vol-atmo').addEventListener('input', e => {
+      player.audio.setAtmoVolume(e.target.valueAsNumber / 100);
+    });
+    document.getElementById('vol-agents').addEventListener('input', e => {
+      player.audio.setAgentsVolume(e.target.valueAsNumber / 100);
+    });
+
+    // ── Compartir ─────────────────────────────────────────────────────────────
+    document.getElementById('share-btn').onclick = () => {
+      if (!currentScore) return;
+      const url = location.href;
+      if (navigator.share) {
+        navigator.share({ title: 'walksound', text: 'mi sonido del día', url }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(url).then(() => showToast('Enlace copiado')).catch(() => prompt('Copia:', url));
+      }
+    };
+  </script>
+</body>
+</html>
