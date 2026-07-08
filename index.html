@@ -346,7 +346,7 @@
             showToast(`captura ${captureBuffers.length}`);
           } catch (e) { console.warn('decodeAudioData:', e); }
         };
-        grainCapture.start({ rmsThreshold: 0.14, duration: 16, cooldown: 90 }, onCapture);
+        grainCapture.start({ rmsThreshold: 0.22, duration: 16, cooldown: 240 }, onCapture);
 
         document.addEventListener('keydown', e => {
           if (e.key !== 'g' && e.key !== 'G') return;
