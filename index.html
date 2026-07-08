@@ -25,10 +25,9 @@
     .top-bar {
       width:100%;
       padding: max(16px, env(safe-area-inset-top)) 20px 0 54px;
-      display:flex; align-items:center; justify-content:space-between;
+      display:flex; align-items:center; justify-content:flex-end;
       flex-shrink:0;
     }
-    .label-ws  { font-size:9px; letter-spacing:.28em; text-transform:uppercase; color:rgba(255,255,255,.16); }
     .top-right { display:flex; align-items:center; gap:8px; }
     .day-date  { font-size:9px; letter-spacing:.06em; color:rgba(255,255,255,.22); }
 
@@ -37,10 +36,15 @@
     #curve-canvas { width:100%; height:100%; display:block; }
 
     /* ── Barra lateral de controles ── */
+    .label-ws {
+      position:fixed; bottom: max(14px, env(safe-area-inset-bottom)); right:14px;
+      font-size:8px; letter-spacing:.28em; text-transform:uppercase;
+      color:rgba(255,255,255,.14); pointer-events:none; z-index:10;
+    }
     #right-strip {
       position:fixed; left:0; top:0; bottom:0; width:44px;
-      background:rgba(0,0,0,.80);
-      border-right:1px solid rgba(255,255,255,.07);
+      background:rgba(28,28,32,1);
+      border-right:1px solid rgba(255,255,255,.10);
       display:flex; flex-direction:column; align-items:center;
       justify-content:space-between; z-index:103;
       padding: max(24px, env(safe-area-inset-top)) 0
@@ -87,7 +91,8 @@
       width:5px; height:5px; border-radius:50%; flex-shrink:0;
       background:rgba(255,255,255,.18); transition:background .4s;
     }
-    .mic-dot.active { background:rgba(80,200,140,.85); animation:recpulse 2.5s ease-in-out infinite; }
+    .mic-dot.on       { background:rgba(80,200,140,.85); animation:recpulse 2.5s ease-in-out infinite; }
+    .mic-dot.capturing{ background:rgba(220,80,80,.85);  animation:recpulse 1.1s ease-in-out infinite; }
     @keyframes recpulse { 0%,100%{opacity:.7} 50%{opacity:1} }
 
     /* ── Toast ── */
@@ -203,12 +208,12 @@
 <body>
   <div class="screen">
     <div class="top-bar">
-      <span class="label-ws">walksounds</span>
       <div class="top-right">
         <span class="day-date" id="day-date"></span>
         <div class="mic-dot" id="mic-dot"></div>
       </div>
     </div>
+    <span class="label-ws">walksounds</span>
 
     <div class="curve-wrap">
       <canvas id="curve-canvas"></canvas>
@@ -332,7 +337,7 @@
       micInited = true;
       try {
         await mic.init();
-        micDot.classList.add('active');
+        /* mic listo — dot sigue gris hasta que empiece a reproducir */
         micActive = true;
         updateTechLog();
         mic.startLogging(300);
@@ -371,10 +376,14 @@
           grainCapture._record(secs);
           recBtn.classList.add('recording');
           recBtn.disabled = true;
+          micDot.classList.add('capturing');
+          micDot.classList.remove('on');
           showToast(`grabando ${secs}s…`);
           setTimeout(() => {
             recBtn.classList.remove('recording');
             recBtn.disabled = false;
+            micDot.classList.remove('capturing');
+            if (playing) micDot.classList.add('on');
           }, secs * 1000 + 500);
         };
 
@@ -683,6 +692,7 @@
         ? '<rect x="4" y="3" width="3.5" height="12" rx="1" fill="rgba(255,255,255,0.8)"/><rect x="10.5" y="3" width="3.5" height="12" rx="1" fill="rgba(255,255,255,0.8)"/>'
         : '<path d="M5 3 L15 9 L5 15 Z" fill="rgba(255,255,255,0.8)"/>';
       active ? playBtn.classList.add('playing') : playBtn.classList.remove('playing');
+      micDot.classList.toggle('on', active);
     }
 
     function startPlay(score) {
