@@ -68,6 +68,22 @@
     }
     .ctrl-btn:hover { color:rgba(255,255,255,.55); }
 
+    /* ── Botón de grabación manual ── */
+    #rec-btn {
+      display:flex; align-items:center; gap:6px;
+      color:rgba(255,255,255,.22);
+    }
+    #rec-btn .rec-dot {
+      width:5px; height:5px; border-radius:50%;
+      background:currentColor; flex-shrink:0;
+      transition:background .3s;
+    }
+    #rec-btn.recording {
+      color:rgba(220,80,80,.85);
+      animation:recpulse 1.2s ease-in-out infinite;
+    }
+    #rec-btn:disabled { opacity:.18; cursor:default; }
+
     /* ── Mic dot ── */
     .mic-dot {
       width:5px; height:5px; border-radius:50%; flex-shrink:0;
@@ -214,7 +230,12 @@
           <path d="M5 3 L15 9 L5 15 Z" fill="rgba(255,255,255,0.8)"/>
         </svg>
       </button>
-      <button class="ctrl-btn" id="share-btn">compartir</button>
+      <div style="display:flex;gap:24px;align-items:center">
+        <button class="ctrl-btn" id="share-btn">compartir</button>
+        <button class="ctrl-btn" id="rec-btn" disabled>
+          <span class="rec-dot"></span>grabar
+        </button>
+      </div>
     </div>
   </div>
 
@@ -348,10 +369,27 @@
         };
         grainCapture.start({ rmsThreshold: 0.22, duration: 16, cooldown: 240 }, onCapture);
 
+        // Habilitar botón de grabación manual
+        const recBtn = document.getElementById('rec-btn');
+        recBtn.disabled = false;
+
+        const triggerManualRec = (secs = 10) => {
+          if (grainCapture._recording) return;
+          grainCapture._record(secs);
+          recBtn.classList.add('recording');
+          recBtn.disabled = true;
+          showToast(`grabando ${secs}s…`);
+          setTimeout(() => {
+            recBtn.classList.remove('recording');
+            recBtn.disabled = false;
+          }, secs * 1000 + 500);
+        };
+
+        recBtn.addEventListener('click', () => triggerManualRec(10));
+
         document.addEventListener('keydown', e => {
           if (e.key !== 'g' && e.key !== 'G') return;
-          grainCapture._record(6);
-          showToast('grabando 6s…');
+          triggerManualRec(10);
         });
       } catch (_) {}
     }
