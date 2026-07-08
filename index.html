@@ -24,7 +24,7 @@
     /* ── Header ── */
     .top-bar {
       width:100%;
-      padding: max(16px, env(safe-area-inset-top)) 20px 0;
+      padding: max(16px, env(safe-area-inset-top)) 20px 0 54px;
       display:flex; align-items:center; justify-content:space-between;
       flex-shrink:0;
     }
@@ -38,9 +38,9 @@
 
     /* ── Barra lateral de controles ── */
     #right-strip {
-      position:fixed; right:0; top:0; bottom:0; width:44px;
+      position:fixed; left:0; top:0; bottom:0; width:44px;
       background:rgba(0,0,0,.80);
-      border-left:1px solid rgba(255,255,255,.07);
+      border-right:1px solid rgba(255,255,255,.07);
       display:flex; flex-direction:column; align-items:center; justify-content:center;
       gap:6px; z-index:103;
       padding: max(20px, env(safe-area-inset-top)) 0
@@ -95,11 +95,11 @@
 
     /* ── Toast ── */
     #toast {
-      position:fixed; bottom:max(20px, env(safe-area-inset-bottom)); right:56px;
+      position:fixed; bottom:max(20px, env(safe-area-inset-bottom)); left:56px;
       font-family:ui-monospace,'Cascadia Code',monospace;
       font-size:8.5px; letter-spacing:.06em;
       color:rgba(255,255,255,.45); pointer-events:none;
-      opacity:0; transition:opacity .3s; text-align:right;
+      opacity:0; transition:opacity .3s; text-align:left;
     }
     #toast.show { opacity:1; }
 
@@ -117,17 +117,17 @@
     body.log-open #log-toggle { color:rgba(255,255,255,.50); }
 
     #tech-log {
-      position:fixed; right:44px; top:0; bottom:0;
+      position:fixed; left:44px; top:0; bottom:0;
       width: min(260px, calc(100vw - 44px));
       background:rgba(0,0,0,.96);
-      border-left:1px solid rgba(255,255,255,.10);
+      border-right:1px solid rgba(255,255,255,.10);
       padding: max(20px, env(safe-area-inset-top)) 16px
                max(20px, env(safe-area-inset-bottom)) 16px;
       font-family:ui-monospace,'Cascadia Code','Fira Code',monospace;
       font-size:9px; letter-spacing:.04em; line-height:1.85;
       color:rgba(255,255,255,.32);
       display:flex; flex-direction:column;
-      transform:translateX(100%);
+      transform:translateX(-100%);
       transition:transform .28s cubic-bezier(.4,0,.2,1);
       pointer-events:none; z-index:101;
       overflow:hidden;
