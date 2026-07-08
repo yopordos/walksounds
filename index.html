@@ -36,20 +36,23 @@
     .curve-wrap { flex:1; width:100%; position:relative; min-height:0; }
     #curve-canvas { width:100%; height:100%; display:block; }
 
-    /* ── Controles ── */
-    .controls {
-      flex-shrink:0;
-      display:flex; flex-direction:column; align-items:center;
-      padding-bottom: max(24px, env(safe-area-inset-bottom));
+    /* ── Barra lateral de controles ── */
+    #right-strip {
+      position:fixed; right:0; top:0; bottom:0; width:44px;
+      background:rgba(0,0,0,.80);
+      border-left:1px solid rgba(255,255,255,.07);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px; z-index:103;
+      padding: max(20px, env(safe-area-inset-top)) 0
+               max(20px, env(safe-area-inset-bottom)) 0;
     }
     #play-btn {
-      width:64px; height:64px; border-radius:50%;
+      width:36px; height:36px; border-radius:50%;
       border:1px solid rgba(255,255,255,.22);
       background:transparent; cursor:pointer; color:#fff;
       display:flex; align-items:center; justify-content:center;
-      transition:border-color .4s, opacity .4s;
-      margin:18px 0 10px;
-      -webkit-tap-highlight-color: transparent;
+      transition:border-color .4s, opacity .4s; flex-shrink:0;
+      -webkit-tap-highlight-color:transparent;
     }
     #play-btn:hover { border-color:rgba(255,255,255,.5); }
     #play-btn.playing { border-color:rgba(255,255,255,.38); animation:breathe 4s ease-in-out infinite; }
@@ -58,31 +61,29 @@
       0%,100% { transform:scale(1); opacity:.5; }
       50%      { transform:scale(1.08); opacity:1; }
     }
-    .ctrl-btn {
+    .strip-btn {
       background:none; border:none;
-      font-size:9px; letter-spacing:.14em; text-transform:uppercase;
-      color:rgba(255,255,255,.22); cursor:pointer;
-      padding:8px 16px; /* área táctil más grande */
-      transition:color .2s;
-      -webkit-tap-highlight-color: transparent;
+      color:rgba(255,255,255,.26); cursor:pointer;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:3px; width:36px; height:32px;
+      font-size:7px; letter-spacing:.12em; text-transform:uppercase;
+      transition:color .2s; flex-shrink:0;
+      -webkit-tap-highlight-color:transparent;
     }
-    .ctrl-btn:hover { color:rgba(255,255,255,.55); }
-
-    /* ── Botón de grabación manual ── */
-    #rec-btn {
-      display:flex; align-items:center; gap:6px;
-      color:rgba(255,255,255,.22);
-    }
+    .strip-btn:hover { color:rgba(255,255,255,.60); }
+    .strip-btn:disabled { opacity:.18; cursor:default; }
     #rec-btn .rec-dot {
       width:5px; height:5px; border-radius:50%;
       background:currentColor; flex-shrink:0;
-      transition:background .3s;
     }
     #rec-btn.recording {
       color:rgba(220,80,80,.85);
       animation:recpulse 1.2s ease-in-out infinite;
     }
-    #rec-btn:disabled { opacity:.18; cursor:default; }
+    .strip-sep {
+      width:18px; height:1px;
+      background:rgba(255,255,255,.08); flex-shrink:0; margin:4px 0;
+    }
 
     /* ── Mic dot ── */
     .mic-dot {
@@ -94,7 +95,7 @@
 
     /* ── Toast ── */
     #toast {
-      position:fixed; bottom:calc(120px + env(safe-area-inset-bottom)); right:16px;
+      position:fixed; bottom:max(20px, env(safe-area-inset-bottom)); right:56px;
       font-family:ui-monospace,'Cascadia Code',monospace;
       font-size:8.5px; letter-spacing:.06em;
       color:rgba(255,255,255,.45); pointer-events:none;
@@ -104,24 +105,20 @@
 
     /* ── Panel técnico — drawer lateral ── */
     #log-toggle {
-      position:fixed; right:0; top:50%;
-      transform:translateY(-50%);
-      width:18px; padding:14px 0;
-      background:rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.10); border-right:none;
-      border-radius:5px 0 0 5px;
-      color:rgba(255,255,255,.28);
+      background:none; border:none;
+      color:rgba(255,255,255,.22); cursor:pointer;
       font-size:7px; letter-spacing:.18em; text-transform:uppercase;
       writing-mode:vertical-rl; text-orientation:mixed;
-      cursor:pointer; z-index:102;
-      transition:right .28s cubic-bezier(.4,0,.2,1), color .2s, background .2s;
+      padding:12px 0; flex-shrink:0;
+      transition:color .2s;
       -webkit-tap-highlight-color:transparent;
     }
-    #log-toggle:hover { background:rgba(255,255,255,.10); color:rgba(255,255,255,.55); }
+    #log-toggle:hover { color:rgba(255,255,255,.55); }
+    body.log-open #log-toggle { color:rgba(255,255,255,.50); }
 
     #tech-log {
-      position:fixed; right:0; top:0; bottom:0;
-      width: min(260px, 88vw);
+      position:fixed; right:44px; top:0; bottom:0;
+      width: min(260px, calc(100vw - 44px));
       background:rgba(0,0,0,.96);
       border-left:1px solid rgba(255,255,255,.10);
       padding: max(20px, env(safe-area-inset-top)) 16px
@@ -144,10 +141,6 @@
     body.log-open #tech-log {
       transform:translateX(0);
       pointer-events:auto;
-    }
-    body.log-open #log-toggle {
-      right: min(260px, 88vw);
-      color:rgba(255,255,255,.45);
     }
 
     /* Sliders */
@@ -224,23 +217,23 @@
       <canvas id="curve-canvas"></canvas>
     </div>
 
-    <div class="controls">
-      <button id="play-btn" disabled>
-        <svg id="play-icon" width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <path d="M5 3 L15 9 L5 15 Z" fill="rgba(255,255,255,0.8)"/>
-        </svg>
-      </button>
-      <div style="display:flex;gap:24px;align-items:center">
-        <button class="ctrl-btn" id="share-btn">compartir</button>
-        <button class="ctrl-btn" id="rec-btn" disabled>
-          <span class="rec-dot"></span>grabar
-        </button>
-      </div>
-    </div>
   </div>
 
-  <!-- Tab para abrir/cerrar el panel -->
-  <button id="log-toggle" aria-label="panel técnico" aria-expanded="false">LOG</button>
+  <!-- Barra lateral: controles + toggle LOG -->
+  <div id="right-strip">
+    <button id="play-btn" disabled aria-label="reproducir">
+      <svg id="play-icon" width="14" height="14" viewBox="0 0 18 18" fill="none">
+        <path d="M5 3 L15 9 L5 15 Z" fill="rgba(255,255,255,0.8)"/>
+      </svg>
+    </button>
+    <button class="strip-btn" id="rec-btn" disabled aria-label="grabar">
+      <span class="rec-dot"></span>
+      <span>rec</span>
+    </button>
+    <button class="strip-btn" id="share-btn" aria-label="compartir">↑</button>
+    <div class="strip-sep"></div>
+    <button id="log-toggle" aria-label="panel técnico" aria-expanded="false">LOG</button>
+  </div>
 
   <!-- Panel técnico: lo que está haciendo el sistema -->
   <div id="tech-log" role="complementary" aria-label="panel técnico">
