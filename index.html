@@ -24,34 +24,34 @@
     /* ── Header ── */
     .top-bar {
       width:100%;
-      padding: max(16px, env(safe-area-inset-top)) 54px 0 20px;
-      display:flex; align-items:center; justify-content:flex-start;
+      padding: max(16px, env(safe-area-inset-top)) 20px 0 20px;
+      display:flex; align-items:center; justify-content:space-between;
       flex-shrink:0;
     }
     .top-right { display:flex; align-items:center; gap:8px; }
     .day-date  { font-size:9px; letter-spacing:.06em; color:rgba(255,255,255,.22); }
 
     /* ── Canvas ── */
-    .curve-wrap { flex:1; width:100%; position:relative; min-height:0; }
+    .curve-wrap { flex:1; width:100%; position:relative; min-height:0; margin-bottom:52px; }
     #curve-canvas { width:100%; height:100%; display:block; }
 
     /* ── Barra lateral de controles ── */
     .label-ws {
-      position:fixed; bottom: max(14px, env(safe-area-inset-bottom)); left:14px;
       font-size:12px; letter-spacing:.28em; text-transform:uppercase;
-      color:rgba(255,255,255,.18); pointer-events:none; z-index:10;
+      color:rgba(255,255,255,.18);
     }
     #right-strip {
-      position:fixed; right:0; top:0; bottom:0; width:44px;
+      position:fixed; bottom:0; left:0; right:0; height:52px;
       background:rgba(28,28,32,1);
-      border-left:1px solid rgba(255,255,255,.10);
-      display:flex; flex-direction:column; align-items:center;
+      border-top:1px solid rgba(255,255,255,.10);
+      display:flex; flex-direction:row; align-items:center;
       justify-content:space-between; z-index:103;
-      padding: max(24px, env(safe-area-inset-top)) 0
-               max(24px, env(safe-area-inset-bottom)) 0;
+      padding: 0 max(24px, env(safe-area-inset-right))
+                 max(0px, env(safe-area-inset-bottom))
+                 max(24px, env(safe-area-inset-left));
     }
     .strip-center {
-      display:flex; flex-direction:column; align-items:center; gap:8px;
+      display:flex; flex-direction:row; align-items:center; gap:4px;
     }
     #play-btn {
       background:none; border:none; cursor:pointer; color:#fff;
@@ -97,7 +97,7 @@
 
     /* ── Toast ── */
     #toast {
-      position:fixed; bottom:max(20px, env(safe-area-inset-bottom)); right:56px;
+      position:fixed; bottom:calc(60px + env(safe-area-inset-bottom)); right:20px;
       font-family:ui-monospace,'Cascadia Code',monospace;
       font-size:8.5px; letter-spacing:.06em;
       color:rgba(255,255,255,.45); pointer-events:none;
@@ -110,8 +110,7 @@
       background:none; border:none;
       color:rgba(255,255,255,.22); cursor:pointer;
       font-size:7px; letter-spacing:.18em; text-transform:uppercase;
-      writing-mode:vertical-rl; text-orientation:mixed;
-      padding:12px 0; flex-shrink:0;
+      padding:8px 0 8px 16px; flex-shrink:0;
       transition:color .2s;
       -webkit-tap-highlight-color:transparent;
     }
@@ -119,17 +118,16 @@
     body.log-open #log-toggle { color:rgba(255,255,255,.50); }
 
     #tech-log {
-      position:fixed; right:44px; top:0; bottom:0;
-      width: min(260px, calc(100vw - 44px));
-      background:rgba(0,0,0,.96);
-      border-left:1px solid rgba(255,255,255,.10);
-      padding: max(20px, env(safe-area-inset-top)) 16px
-               max(20px, env(safe-area-inset-bottom)) 16px;
+      position:fixed; left:0; right:0;
+      bottom:52px; max-height:55vh;
+      background:rgba(10,10,12,.97);
+      border-top:1px solid rgba(255,255,255,.10);
+      padding:16px 20px max(16px, env(safe-area-inset-bottom)) 20px;
       font-family:ui-monospace,'Cascadia Code','Fira Code',monospace;
       font-size:9px; letter-spacing:.04em; line-height:1.85;
       color:rgba(255,255,255,.32);
       display:flex; flex-direction:column;
-      transform:translateX(100%);
+      transform:translateY(100%);
       transition:transform .28s cubic-bezier(.4,0,.2,1);
       pointer-events:none; z-index:101;
       overflow:hidden;
@@ -141,7 +139,7 @@
     #tech-log-body::-webkit-scrollbar { display:none; }
 
     body.log-open #tech-log {
-      transform:translateX(0);
+      transform:translateY(0);
       pointer-events:auto;
     }
 
@@ -208,12 +206,12 @@
 <body>
   <div class="screen">
     <div class="top-bar">
+      <span class="label-ws">walksounds</span>
       <div class="top-right">
         <div class="mic-dot" id="mic-dot"></div>
         <span class="day-date" id="day-date"></span>
       </div>
     </div>
-    <span class="label-ws">walksounds</span>
 
     <div class="curve-wrap">
       <canvas id="curve-canvas"></canvas>
