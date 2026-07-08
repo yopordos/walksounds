@@ -23,7 +23,8 @@
 
     /* ── Header ── */
     .top-bar {
-      width:100%; padding:20px 28px 0;
+      width:100%;
+      padding: max(16px, env(safe-area-inset-top)) 20px 0;
       display:flex; align-items:center; justify-content:space-between;
       flex-shrink:0;
     }
@@ -31,7 +32,7 @@
     .top-right { display:flex; align-items:center; gap:8px; }
     .day-date  { font-size:9px; letter-spacing:.06em; color:rgba(255,255,255,.22); }
 
-    /* ── Campo de formas ── */
+    /* ── Canvas ── */
     .curve-wrap { flex:1; width:100%; position:relative; min-height:0; }
     #curve-canvas { width:100%; height:100%; display:block; }
 
@@ -39,15 +40,16 @@
     .controls {
       flex-shrink:0;
       display:flex; flex-direction:column; align-items:center;
-      padding-bottom:28px;
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
     }
     #play-btn {
-      width:72px; height:72px; border-radius:50%;
+      width:64px; height:64px; border-radius:50%;
       border:1px solid rgba(255,255,255,.22);
       background:transparent; cursor:pointer; color:#fff;
       display:flex; align-items:center; justify-content:center;
       transition:border-color .4s, opacity .4s;
-      margin:22px 0 14px;
+      margin:18px 0 10px;
+      -webkit-tap-highlight-color: transparent;
     }
     #play-btn:hover { border-color:rgba(255,255,255,.5); }
     #play-btn.playing { border-color:rgba(255,255,255,.38); animation:breathe 4s ease-in-out infinite; }
@@ -59,8 +61,10 @@
     .ctrl-btn {
       background:none; border:none;
       font-size:9px; letter-spacing:.14em; text-transform:uppercase;
-      color:rgba(255,255,255,.22); cursor:pointer; padding:4px 0;
+      color:rgba(255,255,255,.22); cursor:pointer;
+      padding:8px 16px; /* área táctil más grande */
       transition:color .2s;
+      -webkit-tap-highlight-color: transparent;
     }
     .ctrl-btn:hover { color:rgba(255,255,255,.55); }
 
@@ -74,57 +78,73 @@
 
     /* ── Toast ── */
     #toast {
-      position:fixed; bottom:78px; right:16px;
+      position:fixed; bottom:calc(120px + env(safe-area-inset-bottom)); right:16px;
       font-family:ui-monospace,'Cascadia Code',monospace;
       font-size:8.5px; letter-spacing:.06em;
       color:rgba(255,255,255,.45); pointer-events:none;
-      opacity:0; transition:opacity .3s;
-      text-align:right;
+      opacity:0; transition:opacity .3s; text-align:right;
     }
     #toast.show { opacity:1; }
 
     /* ── Panel técnico ── */
     #tech-log {
-      position:fixed; bottom:112px; right:16px;
-      width:220px;
+      position:fixed;
+      left:12px; right:12px;
+      bottom: calc(120px + env(safe-area-inset-bottom));
       background:rgba(0,0,0,.92);
       border:1px solid rgba(255,255,255,.10);
-      border-radius:4px;
-      padding:13px 15px;
+      border-radius:6px;
+      padding:12px 14px;
       font-family:ui-monospace,'Cascadia Code','Fira Code',monospace;
-      font-size:9.5px; letter-spacing:.04em; line-height:1.85;
+      font-size:9px; letter-spacing:.04em; line-height:1.8;
       color:rgba(255,255,255,.32);
-      pointer-events:none; overflow:hidden;
+      pointer-events:none;
+      max-height:42vh; overflow:hidden;
     }
+    /* En pantallas grandes: panel lateral derecho */
+    @media (min-width: 540px) {
+      #tech-log {
+        left:auto; right:16px; width:224px;
+        bottom: calc(116px + env(safe-area-inset-bottom));
+      }
+    }
+
+    /* Sliders — área táctil grande */
     #tech-log .tl-vol-row {
-      display:flex; align-items:center; gap:8px;
-      pointer-events:auto;
+      display:flex; align-items:center; gap:10px;
+      pointer-events:auto; padding:4px 0;
     }
-    #tech-log .tl-vol-label { flex:1; opacity:.55; }
+    #tech-log .tl-vol-label { width:44px; opacity:.50; font-size:8.5px; }
     #tech-log .vol-slider {
       -webkit-appearance:none; appearance:none;
-      flex:1; height:1px;
-      background:rgba(255,255,255,.20);
+      flex:1; height:28px;            /* área táctil tall */
+      background:transparent;
       outline:none; cursor:pointer; border:none;
+    }
+    #tech-log .vol-slider::-webkit-slider-runnable-track {
+      height:1px; background:rgba(255,255,255,.20); border-radius:1px;
     }
     #tech-log .vol-slider::-webkit-slider-thumb {
       -webkit-appearance:none;
-      width:7px; height:7px; border-radius:50%;
+      width:14px; height:14px; border-radius:50%;
       background:rgba(255,255,255,.55);
-      cursor:pointer; margin-top:-3px;
+      cursor:pointer; margin-top:-6.5px;
+    }
+    #tech-log .vol-slider::-moz-range-track {
+      height:1px; background:rgba(255,255,255,.20);
     }
     #tech-log .vol-slider::-moz-range-thumb {
-      width:7px; height:7px; border-radius:50%;
+      width:14px; height:14px; border-radius:50%;
       background:rgba(255,255,255,.55);
       border:none; cursor:pointer;
     }
-    #tech-log .vol-slider::-webkit-slider-runnable-track { height:1px; }
+
     #tech-log .tl-head {
       font-size:7px; letter-spacing:.16em; text-transform:uppercase;
-      color:rgba(255,255,255,.14); margin-bottom:3px;
+      color:rgba(255,255,255,.14); margin-bottom:2px;
     }
     #tech-log hr {
-      border:none; border-top:1px solid rgba(255,255,255,.07); margin:6px 0;
+      border:none; border-top:1px solid rgba(255,255,255,.07); margin:5px 0;
     }
     #tech-log .tl-row {
       display:flex; justify-content:space-between; gap:6px; align-items:center;
@@ -144,7 +164,7 @@
       width:22px; text-align:right; flex-shrink:0; opacity:.52;
     }
     #tech-log .tl-event {
-      display:flex; gap:8px; font-size:8.5px;
+      display:flex; gap:8px; font-size:8px;
       color:rgba(255,255,255,.18);
     }
     #tech-log .tl-event.fresh { color:rgba(255,255,255,.55); }
