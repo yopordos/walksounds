@@ -24,8 +24,8 @@
     /* ── Header ── */
     .top-bar {
       width:100%;
-      padding: max(16px, env(safe-area-inset-top)) 20px 0 54px;
-      display:flex; align-items:center; justify-content:flex-end;
+      padding: max(16px, env(safe-area-inset-top)) 54px 0 20px;
+      display:flex; align-items:center; justify-content:flex-start;
       flex-shrink:0;
     }
     .top-right { display:flex; align-items:center; gap:8px; }
@@ -37,14 +37,14 @@
 
     /* ── Barra lateral de controles ── */
     .label-ws {
-      position:fixed; bottom: max(14px, env(safe-area-inset-bottom)); right:14px;
-      font-size:8px; letter-spacing:.28em; text-transform:uppercase;
-      color:rgba(255,255,255,.14); pointer-events:none; z-index:10;
+      position:fixed; bottom: max(14px, env(safe-area-inset-bottom)); left:14px;
+      font-size:10px; letter-spacing:.28em; text-transform:uppercase;
+      color:rgba(255,255,255,.18); pointer-events:none; z-index:10;
     }
     #right-strip {
-      position:fixed; left:0; top:0; bottom:0; width:44px;
+      position:fixed; right:0; top:0; bottom:0; width:44px;
       background:rgba(28,28,32,1);
-      border-right:1px solid rgba(255,255,255,.10);
+      border-left:1px solid rgba(255,255,255,.10);
       display:flex; flex-direction:column; align-items:center;
       justify-content:space-between; z-index:103;
       padding: max(24px, env(safe-area-inset-top)) 0
@@ -97,7 +97,7 @@
 
     /* ── Toast ── */
     #toast {
-      position:fixed; bottom:max(20px, env(safe-area-inset-bottom)); left:56px;
+      position:fixed; bottom:max(20px, env(safe-area-inset-bottom)); right:56px;
       font-family:ui-monospace,'Cascadia Code',monospace;
       font-size:8.5px; letter-spacing:.06em;
       color:rgba(255,255,255,.45); pointer-events:none;
@@ -119,17 +119,17 @@
     body.log-open #log-toggle { color:rgba(255,255,255,.50); }
 
     #tech-log {
-      position:fixed; left:44px; top:0; bottom:0;
+      position:fixed; right:44px; top:0; bottom:0;
       width: min(260px, calc(100vw - 44px));
       background:rgba(0,0,0,.96);
-      border-right:1px solid rgba(255,255,255,.10);
+      border-left:1px solid rgba(255,255,255,.10);
       padding: max(20px, env(safe-area-inset-top)) 16px
                max(20px, env(safe-area-inset-bottom)) 16px;
       font-family:ui-monospace,'Cascadia Code','Fira Code',monospace;
       font-size:9px; letter-spacing:.04em; line-height:1.85;
       color:rgba(255,255,255,.32);
       display:flex; flex-direction:column;
-      transform:translateX(-100%);
+      transform:translateX(100%);
       transition:transform .28s cubic-bezier(.4,0,.2,1);
       pointer-events:none; z-index:101;
       overflow:hidden;
