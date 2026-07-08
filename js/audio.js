@@ -568,8 +568,8 @@ export class AudioEngine {
         : rnd(0.55, 1.45);
 
       const vol = continuous
-        ? rnd(0.03, 0.07)
-        : rnd(0.08, 0.16) * lerp(0.7, 1.0, energy);
+        ? rnd(0.06, 0.12)
+        : rnd(0.18, 0.32) * lerp(0.7, 1.0, energy);
 
       const src = ctx.createBufferSource();
       src.buffer = buffer;

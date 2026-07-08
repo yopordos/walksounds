@@ -365,7 +365,7 @@
             showToast(`captura ${captureBuffers.length}`);
           } catch (e) { console.warn('decodeAudioData:', e); }
         };
-        grainCapture.start({ rmsThreshold: 0.22, duration: 16, cooldown: 240 }, onCapture);
+        grainCapture.start({ rmsThreshold: 0.17, duration: 16, cooldown: 240 }, onCapture);
 
         // Habilitar botón de grabación manual
         const recBtn = document.getElementById('rec-btn');
@@ -697,6 +697,7 @@
 
     function startPlay(score) {
       currentScore = score;
+      player.captureBuffers = captureBuffers; // sincronizar siempre antes de play
       fragStartAt  = performance.now();
       if (!sessionStartAt) sessionStartAt = fragStartAt;
 

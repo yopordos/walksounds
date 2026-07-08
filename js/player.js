@@ -135,14 +135,14 @@ export class Player {
   // sin esperar al ciclo de composición siguiente.
   injectGranular(buffer) {
     if (!this._playing || !this.audio.ctx || !buffer) return;
-    const count = 3 + Math.floor(Math.random() * 3); // 3-5 eventos
+    const count = 4 + Math.floor(Math.random() * 3); // 4-6 eventos
     for (let i = 0; i < count; i++) {
-      const delay = 400 + Math.random() * 12000;
+      const delay = 300 + Math.random() * 8000; // más rápido: 0.3s-8s
       const t = setTimeout(() => {
         if (!this._playing) return;
-        const energy = Math.random() * 0.55 + 0.25;
-        const pan    = (Math.random() - 0.5) * 1.5;
-        this.audio.play('granular', { buffer, energy, pan, continuous: energy < 0.38 });
+        const energy = Math.random() * 0.45 + 0.45; // 0.45-0.90: más energía
+        const pan    = (Math.random() - 0.5) * 1.2;
+        this.audio.play('granular', { buffer, energy, pan, continuous: false });
         this.onSpecies?.('granular');
         this.onGranularFired?.();
       }, delay);
