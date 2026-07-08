@@ -86,39 +86,63 @@
     }
     #toast.show { opacity:1; }
 
-    /* ── Panel técnico ── */
-    #tech-log {
-      position:fixed;
-      left:12px; right:12px;
-      bottom: calc(120px + env(safe-area-inset-bottom));
-      background:rgba(0,0,0,.92);
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:6px;
-      padding:12px 14px;
-      font-family:ui-monospace,'Cascadia Code','Fira Code',monospace;
-      font-size:9px; letter-spacing:.04em; line-height:1.8;
-      color:rgba(255,255,255,.32);
-      pointer-events:none;
-      max-height:42vh; overflow:hidden;
+    /* ── Panel técnico — drawer lateral ── */
+    #log-toggle {
+      position:fixed; right:0; top:50%;
+      transform:translateY(-50%);
+      width:18px; padding:14px 0;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.10); border-right:none;
+      border-radius:5px 0 0 5px;
+      color:rgba(255,255,255,.28);
+      font-size:7px; letter-spacing:.18em; text-transform:uppercase;
+      writing-mode:vertical-rl; text-orientation:mixed;
+      cursor:pointer; z-index:102;
+      transition:right .28s cubic-bezier(.4,0,.2,1), color .2s, background .2s;
+      -webkit-tap-highlight-color:transparent;
     }
-    /* En pantallas grandes: panel lateral derecho */
-    @media (min-width: 540px) {
-      #tech-log {
-        left:auto; right:16px; width:224px;
-        bottom: calc(116px + env(safe-area-inset-bottom));
-      }
+    #log-toggle:hover { background:rgba(255,255,255,.10); color:rgba(255,255,255,.55); }
+
+    #tech-log {
+      position:fixed; right:0; top:0; bottom:0;
+      width: min(260px, 88vw);
+      background:rgba(0,0,0,.96);
+      border-left:1px solid rgba(255,255,255,.10);
+      padding: max(20px, env(safe-area-inset-top)) 16px
+               max(20px, env(safe-area-inset-bottom)) 16px;
+      font-family:ui-monospace,'Cascadia Code','Fira Code',monospace;
+      font-size:9px; letter-spacing:.04em; line-height:1.85;
+      color:rgba(255,255,255,.32);
+      display:flex; flex-direction:column;
+      transform:translateX(100%);
+      transition:transform .28s cubic-bezier(.4,0,.2,1);
+      pointer-events:none; z-index:101;
+      overflow:hidden;
+    }
+    #tech-log-body {
+      flex:1; overflow-y:auto; overflow-x:hidden;
+      scrollbar-width:none;
+    }
+    #tech-log-body::-webkit-scrollbar { display:none; }
+
+    body.log-open #tech-log {
+      transform:translateX(0);
+      pointer-events:auto;
+    }
+    body.log-open #log-toggle {
+      right: min(260px, 88vw);
+      color:rgba(255,255,255,.45);
     }
 
-    /* Sliders — área táctil grande */
+    /* Sliders */
     #tech-log .tl-vol-row {
       display:flex; align-items:center; gap:10px;
-      pointer-events:auto; padding:4px 0;
+      padding:5px 0;
     }
-    #tech-log .tl-vol-label { width:44px; opacity:.50; font-size:8.5px; }
+    #tech-log .tl-vol-label { width:44px; opacity:.50; font-size:8.5px; flex-shrink:0; }
     #tech-log .vol-slider {
       -webkit-appearance:none; appearance:none;
-      flex:1; height:28px;            /* área táctil tall */
-      background:transparent;
+      flex:1; height:28px; background:transparent;
       outline:none; cursor:pointer; border:none;
     }
     #tech-log .vol-slider::-webkit-slider-runnable-track {
@@ -130,13 +154,10 @@
       background:rgba(255,255,255,.55);
       cursor:pointer; margin-top:-6.5px;
     }
-    #tech-log .vol-slider::-moz-range-track {
-      height:1px; background:rgba(255,255,255,.20);
-    }
+    #tech-log .vol-slider::-moz-range-track { height:1px; background:rgba(255,255,255,.20); }
     #tech-log .vol-slider::-moz-range-thumb {
       width:14px; height:14px; border-radius:50%;
-      background:rgba(255,255,255,.55);
-      border:none; cursor:pointer;
+      background:rgba(255,255,255,.55); border:none; cursor:pointer;
     }
 
     #tech-log .tl-head {
@@ -197,8 +218,11 @@
     </div>
   </div>
 
+  <!-- Tab para abrir/cerrar el panel -->
+  <button id="log-toggle" aria-label="panel técnico" aria-expanded="false">LOG</button>
+
   <!-- Panel técnico: lo que está haciendo el sistema -->
-  <div id="tech-log">
+  <div id="tech-log" role="complementary" aria-label="panel técnico">
     <div id="tech-log-body">
       <div class="tl-head">SYSTEM</div>
       <div class="tl-row"><span>mic</span><span class="tl-dim">○ —</span></div>
@@ -681,6 +705,22 @@
 
       startPlay(currentScore);
     };
+
+    // ── Toggle panel técnico ──────────────────────────────────────────────────
+    const logToggle = document.getElementById('log-toggle');
+    logToggle.addEventListener('click', () => {
+      const isOpen = document.body.classList.toggle('log-open');
+      logToggle.setAttribute('aria-expanded', isOpen);
+    });
+    // Cerrar al tocar fuera del panel
+    document.addEventListener('pointerdown', e => {
+      if (!document.body.classList.contains('log-open')) return;
+      const panel = document.getElementById('tech-log');
+      if (!panel.contains(e.target) && e.target !== logToggle) {
+        document.body.classList.remove('log-open');
+        logToggle.setAttribute('aria-expanded', 'false');
+      }
+    });
 
     // ── Barras de volumen ─────────────────────────────────────────────────────
     document.getElementById('vol-atmo').addEventListener('input', e => {
