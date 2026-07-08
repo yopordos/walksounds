@@ -41,25 +41,26 @@
       position:fixed; left:0; top:0; bottom:0; width:44px;
       background:rgba(0,0,0,.80);
       border-right:1px solid rgba(255,255,255,.07);
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:6px; z-index:103;
-      padding: max(20px, env(safe-area-inset-top)) 0
-               max(20px, env(safe-area-inset-bottom)) 0;
+      display:flex; flex-direction:column; align-items:center;
+      justify-content:space-between; z-index:103;
+      padding: max(24px, env(safe-area-inset-top)) 0
+               max(24px, env(safe-area-inset-bottom)) 0;
+    }
+    .strip-center {
+      display:flex; flex-direction:column; align-items:center; gap:8px;
     }
     #play-btn {
-      width:36px; height:36px; border-radius:50%;
-      border:1px solid rgba(255,255,255,.22);
-      background:transparent; cursor:pointer; color:#fff;
+      background:none; border:none; cursor:pointer; color:#fff;
       display:flex; align-items:center; justify-content:center;
-      transition:border-color .4s, opacity .4s; flex-shrink:0;
-      -webkit-tap-highlight-color:transparent;
+      width:36px; height:36px; flex-shrink:0; opacity:.65;
+      transition:opacity .3s; -webkit-tap-highlight-color:transparent;
     }
-    #play-btn:hover { border-color:rgba(255,255,255,.5); }
-    #play-btn.playing { border-color:rgba(255,255,255,.38); animation:breathe 4s ease-in-out infinite; }
-    #play-btn:disabled { opacity:.22; cursor:default; }
+    #play-btn:hover { opacity:1; }
+    #play-btn.playing { opacity:1; animation:breathe 4s ease-in-out infinite; }
+    #play-btn:disabled { opacity:.20; cursor:default; }
     @keyframes breathe {
-      0%,100% { transform:scale(1); opacity:.5; }
-      50%      { transform:scale(1.08); opacity:1; }
+      0%,100% { transform:scale(1); opacity:.55; }
+      50%      { transform:scale(1.12); opacity:1; }
     }
     .strip-btn {
       background:none; border:none;
@@ -79,10 +80,6 @@
     #rec-btn.recording {
       color:rgba(220,80,80,.85);
       animation:recpulse 1.2s ease-in-out infinite;
-    }
-    .strip-sep {
-      width:18px; height:1px;
-      background:rgba(255,255,255,.08); flex-shrink:0; margin:4px 0;
     }
 
     /* ── Mic dot ── */
@@ -219,19 +216,22 @@
 
   </div>
 
-  <!-- Barra lateral: controles + toggle LOG -->
+  <!-- Barra lateral: compartir arriba, play+rec al centro, LOG abajo -->
   <div id="right-strip">
-    <button id="play-btn" disabled aria-label="reproducir">
-      <svg id="play-icon" width="14" height="14" viewBox="0 0 18 18" fill="none">
-        <path d="M5 3 L15 9 L5 15 Z" fill="rgba(255,255,255,0.8)"/>
-      </svg>
-    </button>
-    <button class="strip-btn" id="rec-btn" disabled aria-label="grabar">
-      <span class="rec-dot"></span>
-      <span>rec</span>
-    </button>
     <button class="strip-btn" id="share-btn" aria-label="compartir">↑</button>
-    <div class="strip-sep"></div>
+
+    <div class="strip-center">
+      <button id="play-btn" disabled aria-label="reproducir">
+        <svg id="play-icon" width="16" height="16" viewBox="0 0 18 18" fill="none">
+          <path d="M4 2.5 L15.5 9 L4 15.5 Z" fill="rgba(255,255,255,0.75)"/>
+        </svg>
+      </button>
+      <button class="strip-btn" id="rec-btn" disabled aria-label="grabar">
+        <span class="rec-dot"></span>
+        <span>rec</span>
+      </button>
+    </div>
+
     <button id="log-toggle" aria-label="panel técnico" aria-expanded="false">LOG</button>
   </div>
 
