@@ -21,11 +21,14 @@ export class AcousticSensor {
   }
 
   async init() {
+    // Crear el AudioContext ANTES del await: en iOS el gesto de usuario expira
+    // tras getUserMedia() y el contexto quedaría suspendido para siempre.
+    this.ctx      = new (window.AudioContext || window.webkitAudioContext)();
+    await this.ctx.resume().catch(() => {});
     this._stream  = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       video: false,
     });
-    this.ctx      = new (window.AudioContext || window.webkitAudioContext)();
     const src     = this.ctx.createMediaStreamSource(this._stream);
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 4096;
@@ -135,6 +138,17 @@ function bandE(linear, loHz, hiHz, binW) {
   return sl.length ? sl.reduce((a, b) => a + b, 0) / sl.length : 0;
 }
 
+// Elige el contenedor de grabación que el AudioContext podrá decodificar después.
+// Safari no decodifica webm/opus con decodeAudioData → allí se prefiere mp4/AAC.
+export function pickRecordingMime() {
+  if (typeof MediaRecorder === 'undefined') return '';
+  const isSafari = /apple/i.test(navigator.vendor || '');
+  const prefs = isSafari
+    ? ['audio/mp4', 'audio/mp4;codecs=mp4a.40.2', 'audio/webm;codecs=opus', 'audio/webm']
+    : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+  return prefs.find(m => MediaRecorder.isTypeSupported(m)) || '';
+}
+
 // ─── Captura episódica de granos ─────────────────────────────────────────────
 // Monitorea el RMS del micrófono y, cuando supera un umbral durante 2s,
 // graba un fragmento de audio real. Los fragmentos se devuelven como
@@ -156,6 +170,7 @@ export class GrainCapture {
   // onCapture(arrayBuffer) se llama al terminar cada captura
   start({ rmsThreshold = 0.14, duration = 16, cooldown = 90 } = {}, onCapture) {
     this._onCapture = onCapture;
+    clearInterval(this._monitor); // evita monitores duplicados si se llama dos veces
     this._monitor = setInterval(() => {
       if (this._recording) return;
       if (Date.now() - this._lastCapt < cooldown * 1000) return;
@@ -173,18 +188,31 @@ export class GrainCapture {
     this._lastCapt  = Date.now();
     this._blobs     = [];
 
-    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg']
-      .find(m => MediaRecorder.isTypeSupported(m)) || '';
-    this._recorder = new MediaRecorder(this._stream, mime ? { mimeType: mime } : {});
+    const mime = pickRecordingMime();
+    try {
+      this._recorder = new MediaRecorder(this._stream, mime ? { mimeType: mime } : {});
+    } catch (e) {
+      console.warn('MediaRecorder:', e);
+      this._recording = false;
+      return;
+    }
     this._recorder.ondataavailable = e => { if (e.data.size > 0) this._blobs.push(e.data); };
+    this._recorder.onerror = () => { this._recording = false; };
     this._recorder.onstop = () => {
       const blob = new Blob(this._blobs, { type: mime || 'audio/webm' });
+      this._blobs = [];
       blob.arrayBuffer()
-        .then(ab => this._onCapture?.(ab))
+        .then(ab => { if (ab.byteLength > 0) this._onCapture?.(ab); })
         .catch(() => {})
         .finally(() => { this._recording = false; });
     };
-    this._recorder.start();
+    try {
+      this._recorder.start();
+    } catch (e) {
+      console.warn('MediaRecorder.start:', e);
+      this._recording = false;
+      return;
+    }
     setTimeout(() => {
       if (this._recorder?.state === 'recording') this._recorder.stop();
     }, duration * 1000);

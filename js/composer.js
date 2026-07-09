@@ -41,7 +41,7 @@ function summarize(log) {
     avgMovement:  avg(movements),
     peakMovement: Math.max(...movements, 0),
     movements,
-    avgTemp:      avg(temps),
+    avgTemp:      temps.length ? avg(temps) : 15, // sin datos → templado neutro
     isRainy,
     isStorm,
     maxCode,
@@ -155,17 +155,14 @@ function buildPaletteFromFactors(summary, acoustic, captureCount = 0) {
     p.campana = (p.campana  || 0) + clamp(bright * 0.28, 0, 0.35);
   }
 
-  // Aliento: siempre presente como hilo conductor (el "aire" del día)
-  p.aliento = Math.max(p.aliento || 0, clamp(0.14 + rmsLevel * 0.18, 0.08, 0.52));
+  // Aliento: siempre presente — es la respiración constante del sistema,
+  // lo que hace que nunca haya silencio total y se sienta acompañado.
+  p.aliento = Math.max(p.aliento || 0, 0.35, clamp(0.14 + rmsLevel * 0.18, 0.08, 0.52));
 
   // Arco: solo en días muy quietos
   if (avgMovement < 0.32 && !isStorm) {
     p.arco = Math.max(p.arco || 0, clamp(0.52 - avgMovement * 1.25, 0, 0.58));
   }
-
-  // Aliento siempre presente — es la respiración constante del sistema,
-  // lo que hace que nunca haya silencio total y se sienta acompañado.
-  p.aliento = Math.max(p.aliento || 0, 0.35);
 
   // ── Capa granular — las capturas son el protagonista ─────────────────────
   let sparsity = 1.0;

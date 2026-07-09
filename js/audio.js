@@ -400,7 +400,7 @@ export class AudioEngine {
     const env = ctx.createGain();
     env.gain.setValueAtTime(0, now);
     env.gain.linearRampToValueAtTime(0.12, now + bow);
-    env.gain.setValueAtTime(0.20, now + d - 0.4);
+    env.gain.linearRampToValueAtTime(0.20, now + d - 0.4); // crescendo suave, sin salto
     env.gain.exponentialRampToValueAtTime(0.0001, now + d);
 
     osc.connect(filt); filt.connect(env); this._pan(env, pan);
@@ -468,7 +468,7 @@ export class AudioEngine {
       const env = ctx.createGain();
       env.gain.setValueAtTime(0, now);
       env.gain.linearRampToValueAtTime(amp * 0.075, now + d * 0.28);
-      env.gain.setValueAtTime(amp * 0.13, now + d * 0.72);
+      env.gain.linearRampToValueAtTime(amp * 0.13,  now + d * 0.72); // ráfaga gradual, sin salto
       env.gain.exponentialRampToValueAtTime(0.0001, now + d);
 
       lfo.connect(lfoG); lfoG.connect(env.gain);

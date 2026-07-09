@@ -268,7 +268,7 @@
 
   <script type="module">
     import { generateTodayLog }          from './js/fakelog.js';
-    import { composeDay, describeScore } from './js/composer.js';
+    import { composeDay }                from './js/composer.js';
     import { Player }                    from './js/player.js';
     import { AcousticSensor, GrainCapture } from './js/mic.js';
     import { fetchCurrentWeather }       from './js/weather.js';
@@ -281,6 +281,7 @@
     let playing         = false;
     let acousticSummary = null;
     let captureBuffers  = [];
+    const pendingCaptures = []; // ArrayBuffers capturados antes de que exista el AudioContext
     const MAX_CAPTURES  = 8;
 
     // ── Toast ────────────────────────────────────────────────────────────────
@@ -330,10 +331,24 @@
     }
 
     // ── Mic ──────────────────────────────────────────────────────────────────
-    let micInited = false;
-    let micActive = false;
+    let micInited   = false;
+    let micActive   = false;
+    let micAttempts = 0;
+
+    // Registra un AudioBuffer capturado: lista, visual, partitura e inyección
+    function registerCapture(audioBuf, { toast = true } = {}) {
+      captureBuffers.push(audioBuf);
+      if (captureBuffers.length > MAX_CAPTURES) captureBuffers.shift();
+      player.captureBuffers = captureBuffers;
+      addGranularAgent(captureBuffers.length - 1);
+      player.injectGranular(audioBuf);
+      recompose();
+      if (toast) showToast(`captura ${captureBuffers.length}`);
+    }
+
     async function tryInitMic() {
-      if (micInited) return;
+      if (micInited || micAttempts >= 3) return;
+      micAttempts++;
       micInited = true;
       try {
         await mic.init();
@@ -353,16 +368,10 @@
 
         const grainCapture = new GrainCapture(mic._stream, mic.analyser);
         const onCapture = async (arrayBuffer) => {
-          if (!player.audio.ctx) { window._pendingCapture = arrayBuffer; return; }
+          if (!player.audio.ctx) { pendingCaptures.push(arrayBuffer); return; }
           try {
             const audioBuf = await player.audio.ctx.decodeAudioData(arrayBuffer);
-            captureBuffers.push(audioBuf);
-            if (captureBuffers.length > MAX_CAPTURES) captureBuffers.shift();
-            player.captureBuffers = captureBuffers;
-            addGranularAgent(captureBuffers.length - 1);
-            player.injectGranular(audioBuf);
-            recompose();
-            showToast(`captura ${captureBuffers.length}`);
+            registerCapture(audioBuf);
           } catch (e) { console.warn('decodeAudioData:', e); }
         };
         grainCapture.start({ rmsThreshold: 0.17, duration: 16, cooldown: 240 }, onCapture);
@@ -374,6 +383,7 @@
         const triggerManualRec = (secs = 10) => {
           if (grainCapture._recording) return;
           grainCapture._record(secs);
+          if (!grainCapture._recording) { showToast('no se pudo grabar'); return; }
           recBtn.classList.add('recording');
           recBtn.disabled = true;
           micDot.classList.add('capturing');
@@ -393,7 +403,12 @@
           if (e.key !== 'g' && e.key !== 'G') return;
           triggerManualRec(10);
         });
-      } catch (_) {}
+      } catch (e) {
+        // Permiso denegado o mic no disponible: permitir reintento en el próximo tap
+        micInited = false;
+        console.warn('mic init:', e);
+        if (micAttempts === 1) showToast('micrófono no disponible');
+      }
     }
 
     let weatherInited = false;
@@ -404,10 +419,22 @@
         const w  = await fetchCurrentWeather();
         todayLog = generateTodayLog(w);
         recompose();
-      } catch (_) {}
+      } catch (e) {
+        weatherInited = false; // red caída → reintentar en el próximo tap
+        console.warn('weather:', e);
+      }
     }
 
-    document.addEventListener('click', () => { tryInitMic(); tryFetchWeather(); }, { once: true });
+    // Sin { once }: si mic o clima fallan, el siguiente tap reintenta (guards internos)
+    document.addEventListener('click', () => { tryInitMic(); tryFetchWeather(); });
+
+    // iOS suspende los AudioContext al ir a background o tras interrupciones
+    // (llamada, Siri). Al volver, se reanudan ambos contextos.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (player.audio.ctx?.state === 'suspended') player.audio.ctx.resume().catch(() => {});
+      if (mic.ctx?.state === 'suspended')          mic.ctx.resume().catch(() => {});
+    });
 
     // ── Visualización: campo de formas ───────────────────────────────────────
 
@@ -486,6 +513,7 @@
       if (!playing || !currentScore || !sessionStartAt) return;
       const now         = performance.now();
       const elapsed     = (now - sessionStartAt) / 1000;
+      if (elapsed > LINE_SECS) return; // línea completa — no acumular puntos infinitos en x=1
       const x           = Math.min(1, elapsed / LINE_SECS);
       const fragElapsed = (now - fragStartAt) / 1000;
       const frac        = Math.min(1, fragElapsed / currentScore.duration);
@@ -544,37 +572,40 @@
       canvas.height = canvas.offsetHeight * dpr;
     }
     setCanvasSize();
-    window.addEventListener('resize', setCanvasSize);
+    window.addEventListener('resize', () => { setCanvasSize(); redrawLine(); });
+
+    // Dibujo incremental: cada frame solo pinta el segmento nuevo.
+    // Redibujar toda la línea (hasta ~4800 segmentos) en cada frame
+    // era el mayor costo de CPU/batería en móvil.
+    function drawSegment(p0, p1) {
+      const dpr = window.devicePixelRatio || 1;
+      const W = canvas.width, H = canvas.height;
+      ctx2d.lineWidth = 0.65 * dpr;
+      ctx2d.lineCap   = 'round';
+      ctx2d.lineJoin  = 'round';
+      ctx2d.beginPath();
+      ctx2d.moveTo(p0.x * W, p0.y * H);
+      ctx2d.lineTo(p1.x * W, p1.y * H);
+      ctx2d.strokeStyle = `rgba(${p1.r},${p1.g},${p1.b},0.40)`;
+      ctx2d.stroke();
+    }
+
+    function redrawLine() {
+      ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 1; i < linePoints.length; i++) drawSegment(linePoints[i - 1], linePoints[i]);
+    }
 
     let vizRaf = null;
     function tickViz() {
-      const dpr = window.devicePixelRatio || 1;
-      const W   = canvas.width;
-      const H   = canvas.height;
       const now = performance.now();
 
-      ctx2d.clearRect(0, 0, W, H);
-
-      // Añadir punto cada 100ms mientras suena
+      // Añadir punto cada 100ms mientras suena y pintar solo el segmento nuevo
       if (playing && now - lastPointAt > 100) {
+        const prev = linePoints[linePoints.length - 1];
         addLinePoint();
+        const last = linePoints[linePoints.length - 1];
+        if (prev && last && last !== prev) drawSegment(prev, last);
         lastPointAt = now;
-      }
-
-      // Dibujar línea segmento a segmento (cada uno con su color de warmth)
-      if (linePoints.length >= 2) {
-        ctx2d.lineWidth = 0.65 * dpr;
-        ctx2d.lineCap   = 'round';
-        ctx2d.lineJoin  = 'round';
-        for (let i = 1; i < linePoints.length; i++) {
-          const p0 = linePoints[i - 1];
-          const p1 = linePoints[i];
-          ctx2d.beginPath();
-          ctx2d.moveTo(p0.x * W, p0.y * H);
-          ctx2d.lineTo(p1.x * W, p1.y * H);
-          ctx2d.strokeStyle = `rgba(${p1.r},${p1.g},${p1.b},0.40)`;
-          ctx2d.stroke();
-        }
       }
 
       vizRaf = requestAnimationFrame(tickViz);
@@ -592,7 +623,8 @@
         .sort((a, b) => b[1] - a[1])
         .map(([name, p]) => {
           const isG = name.startsWith('granular');
-          const lbl = isG ? `◆ cap ${name.split('_')[1]}` : name.replace('_',' ');
+          const idx = name.split('_')[1];
+          const lbl = isG ? (idx != null ? `◆ cap ${idx}` : '◆ capturas') : name.replace('_',' ');
           const pct = Math.round(p * 100);
           return `<div class="tl-row">
             <span class="tl-name">${lbl}</span>
@@ -622,6 +654,13 @@
       `;
     }
 
+    // El player emite la especie genérica 'granular' (sin índice): usar la
+    // identidad de la captura más reciente para forma y color.
+    function granularIdentity(species) {
+      return captureIdentities[species]
+          ?? captureIdentities[`granular_${captureBuffers.length - 1}`];
+    }
+
     function logEvent(species) {
       const now  = new Date();
       const hh   = now.getHours().toString().padStart(2, '0');
@@ -629,11 +668,11 @@
       const ss   = now.getSeconds().toString().padStart(2, '0');
       const isG  = species.startsWith('granular');
       const shape = isG
-        ? captureIdentities[species]?.shape
+        ? granularIdentity(species)?.shape
         : AGENT_SHAPE[species];
       const symbol = SHAPE_SYMBOL[shape] || '·';
       const [r, g, b] = isG
-        ? (captureIdentities[species]?.color || [255,255,255])
+        ? (granularIdentity(species)?.color || [255,255,255])
         : (AGENT_COLOR[species] || [255,255,255]);
       logEvents.push({ time: `${hh}:${mm}:${ss}`, symbol, color: `${r},${g},${b}` });
       if (logEvents.length > 14) logEvents.shift();
@@ -644,8 +683,8 @@
       logEvent(species);
       const isG    = species.startsWith('granular');
       const color  = isG
-        ? (captureIdentities[species]?.color || [200,200,200])
-        : (AGENT_COLOR[species]              || [200,200,200]);
+        ? (granularIdentity(species)?.color || [200,200,200])
+        : (AGENT_COLOR[species]             || [200,200,200]);
       const sig = isG
         ? { dir: (Math.random() > 0.5 ? 1 : -1), str: 0.06, decay: 0.91 }
         : (AGENT_INFLUENCE[species] || { dir: 0, str: 0.04, decay: 0.90 });
@@ -722,6 +761,7 @@
         player.stop(); setPlayState(false);
         sessionStartAt = null; fragStartAt = null;
         linePoints.length = 0; activeInfluences.length = 0;
+        redrawLine(); // el canvas ya no se limpia por frame
         return;
       }
       if (!currentScore) return;
@@ -733,16 +773,13 @@
       }
       playBtn.disabled = false;
 
-      if (window._pendingCapture) {
-        const pending = window._pendingCapture;
-        window._pendingCapture = null;
-        player.audio.ctx.decodeAudioData(pending).then(buf => {
-          captureBuffers.push(buf);
-          player.captureBuffers = captureBuffers;
-          addGranularAgent(captureBuffers.length - 1);
-          player.injectGranular(buf);
-          recompose();
-        }).catch(() => {});
+      // Decodificar TODAS las capturas que llegaron antes de crear el contexto
+      if (pendingCaptures.length) {
+        pendingCaptures.splice(0).forEach(ab => {
+          player.audio.ctx.decodeAudioData(ab)
+            .then(buf => registerCapture(buf, { toast: false }))
+            .catch(e => console.warn('decodeAudioData (pendiente):', e));
+        });
       }
 
       startPlay(currentScore);

@@ -1,6 +1,7 @@
 // player.js — Interpreta la partitura generada por composer.js
 
 import { AudioEngine } from './audio.js';
+import { pickRecordingMime } from './mic.js';
 
 const rnd   = (a, b)    => a + Math.random() * (b - a);
 const lerp  = (a, b, t) => a + (b - a) * Math.max(0, Math.min(1, t));
@@ -54,7 +55,10 @@ export class Player {
         if (!this._playing) return;
         const energy = this._energyAt(time, score);
         const atmo   = { energy, ...score.atmosphere, _acousticSummary: score.acousticSummary };
-        this.audio.play(species, this._paramsFor(species, atmo));
+        const params = this._paramsFor(species, atmo);
+        // Sin capturas aún no hay granular: evita pulso visual sin sonido
+        if (species === 'granular' && !params.buffer) return;
+        this.audio.play(species, params);
         this.onSpecies?.(species);
       }, time * 1000);
       this._timers.push(t);
@@ -76,6 +80,8 @@ export class Player {
       this.onProgress?.(fraction);
       const now = performance.now();
       if (now - lastAtmo > 1000) {
+        // iOS suspende el contexto tras interrupciones (llamadas, Siri, background)
+        if (this.audio.ctx?.state === 'suspended') this.audio.ctx.resume().catch(() => {});
         const energy = this._energyAt(elapsed, score);
         this.audio.setWorld({
           energy,
@@ -107,8 +113,7 @@ export class Player {
     const stream = this.audio.createRecordingStream();
     if (!stream) return;
 
-    const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg']
-      .find(m => MediaRecorder.isTypeSupported(m)) || '';
+    const mimeType = pickRecordingMime();
     const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
     const chunks   = [];
 
